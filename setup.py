@@ -5,6 +5,10 @@ with open('README.md') as fp:
     long_description = fp.read()
 
 
+with open('requirements.txt') as fp:
+    install_requires = [l.strip() for l in fp.readlines()]
+
+
 setup(
     name='datapype',
     version='0.0.1',
