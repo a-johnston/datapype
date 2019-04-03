@@ -1,5 +1,8 @@
+from typing import Type, Union
+
+
 class field(object):
-    def __init__(self, type_arg):
+    def __init__(self, type_arg, required=False, default=None):
         self.type_arg = type_arg if isinstance(type_arg, tuple) else (type_arg,)
 
     def check(self, value):
@@ -12,11 +15,17 @@ class field(object):
         return value
 
 
+class field(type_arg):
+    type_arg = type_arg if isinstance(type_arg, tuple) else (type_arg,)
+
+    class _Field(object):
+        
+
+
 def _get_fields(cls):
     if not hasattr(cls, '_fields'):
-        fields = [k for k in dir(cls) if isinstance(getattr(cls, k), field)]
-        index_mapping = {k: i for i, k in enumerate(fields)}
-        setattr(cls, '_fields', index_mapping)
+        fields = tuple((k for k in dir(cls) if isinstance(getattr(cls, k), field)))
+        setattr(cls, '_fields', fields)
     return getattr(cls, '_fields')
 
 
@@ -42,7 +51,7 @@ class TypedTuple(tuple):
 
     def __getitem__(self, key):
         if isinstance(key, str):
-            key = self._fields[key]
+            return getattr(self, key)
         return super(TypedTuple, self).__getitem__(key)
 
     def __setattr__(self, name, value):
