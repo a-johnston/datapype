@@ -15,14 +15,14 @@ class field(object):
     def check(self, value):
         if value is _missing:
             if self.required is True:
-                return None, 'Field is missing but required'
+                return None, 'field {!r} is missing but required'
             value = self.default
         if self.factory is not None:
             value = self.factory(value)
         if value is not None and not isinstance(value, self.type_arg):
             expected = ', '.join(map(lambda c: c.__name__, self.type_arg))
             actual = type(value).__name__
-            return None, f'Expected {expected} but got {name} ({value})'
+            return None, f'field {"{!r}"} expected {expected} but got {actual} ({value})'
         return value, None
 
 
@@ -43,7 +43,7 @@ class TypedTuple(object):
         for key, field in fields.items():
             value, err = field.check(kwargs.get(key, _missing))
             if err:
-                errors += err
+                errors.append(err.format(key))
             setattr(self, key, value)
         if errors:
             raise ValueError(f'Errors constructing {type(self).__name__}: {", ".join(errors)}')
@@ -55,10 +55,10 @@ class TypedTuple(object):
         return self
 
     def values(self):
-        return (self[k] for x in self._fields)
+        return (self[k] for k in self._fields)
 
     def items(self):
-        return ((name, self[k]) for k in self._fields)
+        return ((k, self[k]) for k in self._fields)
 
     def asdict(self):
         return dict(self)
@@ -70,7 +70,7 @@ class TypedTuple(object):
 
     def __setattr__(self, name, value):
         if name is '_fields' or (name in self._fields and name in vars(self)):
-            raise Exception('cant let you do that')
+            raise Exception('TypedTuple instances should be treated as immutable')
         super(TypedTuple, self).__setattr__(name, value)
 
     def __repr__(self):
