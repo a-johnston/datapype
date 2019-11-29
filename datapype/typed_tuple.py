@@ -1,50 +1,64 @@
+from collections import OrderedDict
 from typing import Type, Union
 
 
+_missing = object()
+
+
 class field(object):
-    def __init__(self, type_arg, required=False, default=None):
-        self.type_arg = type_arg if isinstance(type_arg, tuple) else (type_arg,)
+    def __init__(self, *type_arg, required=False, default=None, factory=None):
+        self.type_arg = type_arg
+        self.required = required
+        self.default = default
+        self.factory = factory
 
     def check(self, value):
-        if not isinstance(value, self.type_arg):
-            raise ValueError('Expected {} but got {} ({})'.format(
-                ', '.join(map(lambda cls: cls.__name__, self.type_arg)),
-                type(value).__name__,
-                value,
-            ))
-        return value
-
-
-class field(type_arg):
-    type_arg = type_arg if isinstance(type_arg, tuple) else (type_arg,)
-
-    class _Field(object):
-        
+        if value is _missing:
+            if self.required is True:
+                return None, 'Field is missing but required'
+            value = self.default
+        if self.factory is not None:
+            value = self.factory(value)
+        if value is not None and not isinstance(value, self.type_arg):
+            expected = ', '.join(map(lambda c: c.__name__, self.type_arg))
+            actual = type(value).__name__
+            return None, f'Expected {expected} but got {name} ({value})'
+        return value, None
 
 
 def _get_fields(cls):
     if not hasattr(cls, '_fields'):
-        fields = tuple((k for k in dir(cls) if isinstance(getattr(cls, k), field)))
-        setattr(cls, '_fields', fields)
+        fields = ((k, getattr(cls, k)) for k in dir(cls) if isinstance(getattr(cls, k), field))
+        setattr(cls, '_fields', OrderedDict(fields))
     return getattr(cls, '_fields')
 
 
-class TypedTuple(tuple):
-    def __new__(cls, **kwargs):
-        values = (getattr(cls, name).check(kwargs[name]) for name in _get_fields(cls))
-        result = super(TypedTuple, cls).__new__(cls, values)
-        for name, value in zip(result._fields, result):
-            setattr(result, name, value)
-        return result
+class TypedTuple(object):
+    def __init__(self, **kwargs):
+        errors = []
+        fields = _get_fields(type(self))
+        extra_fields = sorted(set(kwargs) - set(fields))
+        if extra_fields:
+            raise ValueError(f'Extra fields {", ".join(extra_fields)}')
+        for key, field in fields.items():
+            value, err = field.check(kwargs.get(key, _missing))
+            if err:
+                errors += err
+            setattr(self, key, value)
+        if errors:
+            raise ValueError(f'Errors constructing {type(self).__name__}: {", ".join(errors)}')
+
+    def __iter__(self):
+        return iter(self._fields)
 
     def keys(self):
-        return tuple(self._fields)
+        return self
 
     def values(self):
-        return tuple(self)
+        return (self[k] for x in self._fields)
 
     def items(self):
-        return ((name, self[name]) for name in self._fields)
+        return ((name, self[k]) for k in self._fields)
 
     def asdict(self):
         return dict(self)
@@ -62,3 +76,4 @@ class TypedTuple(tuple):
     def __repr__(self):
         values = repr(dict(self))[1:-1].replace('\'', '').replace(': ', '=')
         return '{}({})'.format(type(self).__name__, values)
+

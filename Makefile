@@ -1,10 +1,6 @@
 PY_DEPS := $(wildcard datapype/*.py)
 
-dev: $(PY_DEPS)
-	virtualenv .venv
-	.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
-
-test: dev
+test: $(PY_DEPS) $(wildcard tests/*.py)
 	tox
 
 sdist: $(PY_DEPS)
@@ -12,7 +8,3 @@ sdist: $(PY_DEPS)
 
 pypi: sdist
 	twine upload dist/*
-
-clean:
-	rm dist/*
-	rm -r .venv

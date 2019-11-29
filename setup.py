@@ -5,9 +5,6 @@ with open('README.md') as fp:
     long_description = fp.read()
 
 
-with open('requirements.txt') as fp:
-    install_requires = [l.strip() for l in fp.readlines()]
-
 
 setup(
     name='datapype',
@@ -19,9 +16,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/a-johnston/datapype',
     packages=['datapype'],
-    install_requires=[
-        'pyrsistent',
-    ],
+    install_requires=[],
     license=['MIT'],
     classifiers=[
         'Programming Language :: Python :: 2',
